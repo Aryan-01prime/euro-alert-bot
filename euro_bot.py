@@ -1,19 +1,16 @@
 import requests
 import time
 import threading
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, Updater
+from telegram import Bot
 
 # ✅ Your bot token and user ID (already filled in)
 TOKEN = '7514499433:AAFi0kU_vxbuJFRyg40MpBrrM75DxrJiAek'
 CHAT_ID = '1866841971'
 
-# Alarm state and range
 alarm_active = False
 LOW = 90
 HIGH = 94.5
 
-# Get live Euro to INR rate
 def get_euro_rate():
     try:
         url = 'https://api.exchangerate.host/latest?base=EUR&symbols=INR'
@@ -22,21 +19,18 @@ def get_euro_rate():
         if rate is not None:
             return rate
         else:
-            print("⚠️ Couldn't find INR rate in response:", response)
+            print("⚠️ INR rate missing:", response)
             return None
     except Exception as e:
-        print(f"🚨 Error while fetching EUR rate: {e}")
+        print(f"🚨 API error: {e}")
         return None
 
-
-# Send repeating alerts
 def alarm_loop(bot):
     global alarm_active
     while alarm_active:
         bot.send_message(chat_id=CHAT_ID, text='🚨 *ALERT!* Euro is between ₹90 and ₹94.5! 🔊', parse_mode='Markdown')
-        time.sleep(60)  # Alert every 1 minute
+        time.sleep(60)
 
-# Check rate and start alarm
 def check_price(bot):
     global alarm_active
     rate = get_euro_rate()
@@ -47,33 +41,13 @@ def check_price(bot):
         alarm_active = True
         threading.Thread(target=alarm_loop, args=(bot,)).start()
 
-
-# /start command
-def start(update: Update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="👋 I'm now tracking Euro for you!")
-
-# /stop command
-def stop(update: Update, context):
-    global alarm_active
-    alarm_active = False
-    context.bot.send_message(chat_id=update.effective_chat.id, text="🔕 Alert stopped.")
-
-# Main bot loop
 def main():
-    updater = Updater(token=TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("stop", stop))
-
-    updater.start_polling()
-
     bot = Bot(token=TOKEN)
-
-    # Check every 2 minutes
+    print("✅ Bot started and tracking EUR/INR...")
     while True:
         check_price(bot)
         time.sleep(120)
 
 if __name__ == '__main__':
     main()
+
