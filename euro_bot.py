@@ -15,9 +15,19 @@ HIGH = 94.5
 
 # Get live Euro to INR rate
 def get_euro_rate():
-    url = 'https://api.exchangerate.host/latest?base=EUR&symbols=INR'
-    response = requests.get(url).json()
-    return response['rates']['INR']
+    try:
+        url = 'https://api.exchangerate.host/latest?base=EUR&symbols=INR'
+        response = requests.get(url, timeout=10).json()
+        rate = response.get('rates', {}).get('INR')
+        if rate is not None:
+            return rate
+        else:
+            print("⚠️ Couldn't find INR rate in response:", response)
+            return None
+    except Exception as e:
+        print(f"🚨 Error while fetching EUR rate: {e}")
+        return None
+
 
 # Send repeating alerts
 def alarm_loop(bot):
@@ -30,10 +40,13 @@ def alarm_loop(bot):
 def check_price(bot):
     global alarm_active
     rate = get_euro_rate()
+    if rate is None:
+        return
     print(f"EUR/INR = ₹{rate}")
     if LOW <= rate <= HIGH and not alarm_active:
         alarm_active = True
         threading.Thread(target=alarm_loop, args=(bot,)).start()
+
 
 # /start command
 def start(update: Update, context):
